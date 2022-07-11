@@ -40,7 +40,8 @@ mongoose.connect("mongodb://localhost:27017/userDB");
 //create mongoose user schema
 const userSchema = new mongoose.Schema({
   email: String,
-  password: String
+  password: String,
+  googleId:String
 });
 
 //initilize plug-in for Mongoose schema
@@ -61,14 +62,15 @@ passport.deserializeUser(function(user, done) {
   done(null, user);
 });
 
-//poassport google oath 20 package
+//passport google oath 20 package
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
     callbackURL: "http://localhost:3000/auth/google/secrets"
   },
   function(accessToken, refreshToken, profile, cb) {
-    User.findOrCreate({ googleId: profile.id }, function (err, user) {
+    console.log(profile);
+    User.findOrCreate({ username: profile.id }, function (err, user) {
       return cb(err, user);
     });
   }
