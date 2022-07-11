@@ -41,7 +41,8 @@ mongoose.connect("mongodb://localhost:27017/userDB");
 const userSchema = new mongoose.Schema({
   email: String,
   password: String,
-  googleId:String
+  googleId: String,
+  secret: String
 });
 
 //initilize plug-in for Mongoose schema
@@ -69,7 +70,6 @@ passport.use(new GoogleStrategy({
     callbackURL: "http://localhost:3000/auth/google/secrets"
   },
   function(accessToken, refreshToken, profile, cb) {
-    console.log(profile);
     User.findOrCreate({ username: profile.id }, function (err, user) {
       return cb(err, user);
     });
@@ -94,6 +94,31 @@ app.get('/auth/google/secrets',
     res.redirect('/secrets');
   });
 
+app.get("/submit", function(req, res){
+  if(req.isAuthenticated()) {
+    res.render("submit");
+  } else {
+    res.redirect("/login");
+  }
+});
+
+app.post("/submit", function(req, res){
+  const submittedSecret = req.body.secret;
+
+  User.findById(req.user.id, function(err, foundUser){
+    if(err){
+      console.log(err);
+    } else {
+      if(foundUser){
+        foundUser.secret = submittedSecret;
+        foundUser.save(function(){
+          res.redirect("/secrets");
+        });
+      }
+    }
+  });
+});
+
 app.get("/login", function(req, res){
   res.render("login");
 });
@@ -112,7 +137,7 @@ app.get("/secrets", function(req, res){
   }
 });
 
-app.get("logout", function(req, res){
+app.get("/logout", function(req, res){
   req.logout();
   res.redirect("/");
 })
