@@ -70,48 +70,52 @@ passport.use(new GoogleStrategy({
     callbackURL: "http://localhost:3000/auth/google/secrets"
   },
   function(accessToken, refreshToken, profile, cb) {
-    User.findOrCreate({ username: profile.id }, function (err, user) {
+    User.findOrCreate({
+      username: profile.id
+    }, function(err, user) {
       return cb(err, user);
     });
   }
 ));
 
 //////////////Routes////////////////
-app.get("/", function(req, res){
+app.get("/", function(req, res) {
   res.render("home");
 });
 
 app.get("/auth/google", passport.authenticate('google', {
 
-    scope: ["profile"]
+  scope: ["profile"]
 
 }));
 
 app.get('/auth/google/secrets',
-  passport.authenticate('google', { failureRedirect: '/login' }),
+  passport.authenticate('google', {
+    failureRedirect: '/login'
+  }),
   function(req, res) {
     // Successful authentication, redirect to the secrets page.
     res.redirect('/secrets');
   });
 
-app.get("/submit", function(req, res){
-  if(req.isAuthenticated()) {
+app.get("/submit", function(req, res) {
+  if (req.isAuthenticated()) {
     res.render("submit");
   } else {
     res.redirect("/login");
   }
 });
 
-app.post("/submit", function(req, res){
+app.post("/submit", function(req, res) {
   const submittedSecret = req.body.secret;
 
-  User.findById(req.user.id, function(err, foundUser){
-    if(err){
+  User.findById(req.user._id.toString(), function(err, foundUser) {
+    if (err) {
       console.log(err);
     } else {
-      if(foundUser){
+      if (foundUser) {
         foundUser.secret = submittedSecret;
-        foundUser.save(function(){
+        foundUser.save(function() {
           res.redirect("/secrets");
         });
       }
@@ -119,42 +123,53 @@ app.post("/submit", function(req, res){
   });
 });
 
-app.get("/login", function(req, res){
+app.get("/login", function(req, res) {
   res.render("login");
 });
 
-app.get("/register", function(req, res){
+app.get("/register", function(req, res) {
   res.render("register");
 });
 
 //checks if the user has been authenticated
 //if not authenticated, redirect to the login page
-app.get("/secrets", function(req, res){
-  if(req.isAuthenticated()) {
-    res.render("secrets");
-  } else {
-    res.redirect("/login");
-  }
+app.get("/secrets", function(req, res) {
+  //checks if the secret field is not null
+  User.find({
+    "secret": {
+      $ne: null
+    }
+  }, function(err, foundUsers) {
+    if(err) {
+      console.log(err);
+    } else {
+      if (foundUsers) {
+        res.render("secrets", {usersWithSecrets: foundUsers});
+      }
+    }
+  });
 });
 
-app.get("/logout", function(req, res){
+app.get("/logout", function(req, res) {
   req.logout();
   res.redirect("/");
 })
 
 //create a new user
 //when new user created, you can see the secret
-app.post("/register", function(req, res){
+app.post("/register", function(req, res) {
   //create a new user using the Passport package
-  User.register({username: req.body.username},req.body.password, function(err, user){
+  User.register({
+    username: req.body.username
+  }, req.body.password, function(err, user) {
     //if error occurs, log the error
     //and redirect the user back register page
-    if(err){
+    if (err) {
       console.log(err);
       res.redirect("/register");
     } else {
       //authenticate the local user and generate a cookie
-      passport.authenticate("local")(req, res, function(){
+      passport.authenticate("local")(req, res, function() {
         //display the secrets page once the user is authenticated
         res.redirect("/secrets");
       });
@@ -164,18 +179,18 @@ app.post("/register", function(req, res){
 
 //log in
 //check if the password that the user put in is the same as in the database
-app.post("/login", function(req, res){
+app.post("/login", function(req, res) {
   const user = new User({
     username: req.body.username,
     password: req.body.password
   });
 
   //pass in the new user info
-  req.login(user, function(err){
-    if(err){
+  req.login(user, function(err) {
+    if (err) {
       console.log(err);
     } else {
-      passport.authenticate("local")(req, res, function(){
+      passport.authenticate("local")(req, res, function() {
         //display the secrets page once the user is authenticated
         res.redirect("/secrets");
       });
@@ -184,6 +199,6 @@ app.post("/login", function(req, res){
 
 });
 
-app.listen(3000, function(req, res){
+app.listen(3000, function(req, res) {
   console.log("Server started on port 3000");
 });
